@@ -1,5 +1,5 @@
 import os
-from typing import List, Union
+from typing import List, Union, Optional
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -38,6 +38,15 @@ class Settings(BaseSettings):
     DB_ECHO: bool = False
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
+
+    # Google Earth Engine (GEE) Configuration
+    EE_PROJECT_ID: Optional[str] = None
+    EE_SERVICE_ACCOUNT_EMAIL: Optional[str] = None
+    EE_PRIVATE_KEY_PATH: Optional[str] = None
+    EE_PRIVATE_KEY_JSON: Optional[str] = None
+    EE_CACHE_TTL_SECONDS: int = 3600
+    EE_DEFAULT_MAX_CLOUD_PERCENT: float = 20.0
+    EE_DEFAULT_RESOLUTION_METERS: int = 20
 
     model_config = SettingsConfigDict(
         env_file=".env",

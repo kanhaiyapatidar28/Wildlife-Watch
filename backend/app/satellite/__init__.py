@@ -1,10 +1,45 @@
-from .indices import calculate_ndvi, calculate_ndwi, calculate_ndbi
+from .indices import calculate_ndvi as calculate_ndvi_numeric, calculate_ndwi as calculate_ndwi_numeric, calculate_ndbi as calculate_ndbi_numeric
 from .mock_scenes import get_mock_scenes, generate_spectral_surface_reflectance
+from .earth_engine import (
+    initialize_earth_engine,
+    is_earth_engine_initialized,
+    get_initialization_error,
+    get_sentinel_images,
+    mask_clouds,
+    calculate_ndvi,
+    calculate_ndwi,
+    calculate_ndbi,
+    calculate_composite,
+    calculate_change,
+    parse_ee_geometry,
+    EarthEngineError,
+    EarthEngineNotInitializedError,
+    EarthEngineAuthError,
+    EarthEngineQueryError,
+    EarthEngineExecutionError,
+)
 
 __all__ = [
+    "calculate_ndvi_numeric",
+    "calculate_ndwi_numeric",
+    "calculate_ndbi_numeric",
+    "get_mock_scenes",
+    "generate_spectral_surface_reflectance",
+    "initialize_earth_engine",
+    "is_earth_engine_initialized",
+    "get_initialization_error",
+    "get_sentinel_images",
+    "mask_clouds",
     "calculate_ndvi",
     "calculate_ndwi",
     "calculate_ndbi",
-    "get_mock_scenes",
-    "generate_spectral_surface_reflectance",
+    "calculate_composite",
+    "calculate_change",
+    "parse_ee_geometry",
+    "EarthEngineError",
+    "EarthEngineNotInitializedError",
+    "EarthEngineAuthError",
+    "EarthEngineQueryError",
+    "EarthEngineExecutionError",
 ]
+
