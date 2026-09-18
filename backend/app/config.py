@@ -33,6 +33,12 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = "wildlife-watch-development-secret-key-change-in-production"
 
+    # PostgreSQL / PostGIS Database Configuration
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/wildlife_watch"
+    DB_ECHO: bool = False
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
