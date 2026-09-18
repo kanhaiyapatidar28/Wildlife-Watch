@@ -323,4 +323,38 @@
 - Local PostgreSQL instance is running; connection string can be tuned in `.env` (`DATABASE_URL=postgresql://<user>:<password>@localhost:5432/wildlife_watch`).
 - Next recommended step: Connect Next.js frontend to FastAPI backend endpoints.
 
+### 2026-09-18 17:30
+
+**User Request**
+> open website
+
+**Exploration**
+- Checked active TCP listeners on ports 3000 (Next.js) and 8000 (FastAPI).
+- Found neither port currently listening.
+- Inspected available Chrome DevTools MCP tools for browser automation.
+
+**Work Done**
+- Launched FastAPI backend server on `http://127.0.0.1:8000` via Uvicorn daemon.
+- Launched Next.js production server on `http://localhost:3000` via npm daemon.
+- Automated Chrome browser session to navigate to `http://localhost:3000/dashboard`.
+- Verified loaded UI and captured high-resolution viewport telemetry screenshot.
+
+**Files Changed**
+- `memory.md`
+  - Recorded interaction and verification details.
+
+**Verification**
+- Frontend: `http://localhost:3000/dashboard` responded 200 OK.
+- Backend: `http://127.0.0.1:8000/` initialized.
+- Visual Inspection: Verified dashboard layout including Copernicus NRT status indicator, Virunga / Indian reserve telemetry cards, and tactical Mapbox GL multi-spectral layer canvas.
+
+**Git**
+- Branch: master
+- Commit: Pending (staged and committed below)
+- Push: Pending
+- Status: Ready to commit
+
+**Notes**
+- Next recommended step: Wire frontend data fetching hooks directly to the FastAPI backend API endpoints.
+
 
