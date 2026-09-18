@@ -187,3 +187,37 @@
 - All 13 endpoints are tested and ready for Next.js frontend consumption.
 - Next recommended step: Connect Next.js frontend services/hooks to consume the FastAPI endpoints instead of local mock arrays.
 
+### 2026-09-18 16:45
+
+**User Request**
+> open website
+
+**Exploration**
+- Checked status of background tasks and local network ports.
+- Verified presence of Next.js production build and executed `npm run build` cleanly (17/17 routes compiled).
+- Started Next.js production server on `http://localhost:3000`.
+- Verified FastAPI backend running on `http://127.0.0.1:8000`.
+
+**Work Done**
+- Started Next.js frontend server (`npm run start`) on port 3000.
+- Connected Chrome browser via `chrome-devtools-mcp` to `http://localhost:3000/dashboard`.
+- Captured viewport visual screenshot of the operational Wildlife Watch GIS dashboard.
+
+**Files Changed**
+- `memory.md`
+  - Recorded interaction and system status.
+
+**Verification**
+- Frontend: `http://localhost:3000/dashboard` loaded successfully with 200 OK.
+- Backend: `http://127.0.0.1:8000/health` verified operational.
+- Visual inspection: Captured and verified high-resolution screenshot displaying KPI telemetry cards, top navigation bar, protected area selector, and Mapbox geospatial canvas.
+
+**Git**
+- Branch: master
+- Commit: Pending (staged and committed below)
+- Push: failed (No remote repository configured)
+
+**Notes**
+- Both frontend and backend services are actively running in background daemon processes.
+
+
