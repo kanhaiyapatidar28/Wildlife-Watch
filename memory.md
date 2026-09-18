@@ -47,6 +47,7 @@
   - Seed dataset covering premier Indian tiger reserves (Kanha, Bandhavgarh, Satpura, Kaziranga) and global reserves.
   - Google Earth Engine (GEE) integration (`app/satellite/earth_engine.py`) with all 7 functions (`get_sentinel_images`, `mask_clouds`, `calculate_ndvi`, `calculate_ndwi`, `calculate_ndbi`, `calculate_composite`, `calculate_change`), server-side reductions, MapID generation, and TTL caching.
   - **Frontend-Backend API Integration**: Resilient API client (`frontend/src/lib/api-client.ts`) directly consuming FastAPI REST endpoints (`http://127.0.0.1:8000/api`) with automatic fallback to local geospatial mock datasets on offline/unreachable states, verified with live telemetry and `FASTAPI: CONNECTED` status badges across all core pages.
+  - **Central Assets Registry**: Unified catalog in `frontend/src/assets.ts` providing strongly typed images and videos across 6 image categories (branding, reserves, wildlife, satellite spectrals, hotspots, UI overlays) and 4 video categories (drone patrols, satellite timelapses, camera traps, operational briefings) with helper lookup resolvers and instant offline SVG generators.
 
 ## Known Issues
 - Live Google Earth Engine execution requires configuring `EE_PROJECT_ID` or `EE_SERVICE_ACCOUNT_EMAIL` with valid GCP credentials in `.env`; without credentials, the system operates with its validated offline geospatial simulation engine.
@@ -553,5 +554,50 @@
 
 **Notes**
 - Next steps: Mapbox GL live Earth Engine tile URL rendering and report file export download.
+
+### 2026-09-18 18:50
+
+**User Request**
+> create one file for assets in src for images and videos
+
+**Exploration**
+- Inspected `frontend/src` directory structure, verified path aliases (`@/*` -> `./src/*`).
+- Identified requirements for a central, strongly-typed asset registry covering images and videos for Wildlife Watch.
+- Identified domain asset requirements:
+  - Branding and logos (emblems, badges, radar hero background)
+  - Protected reserve high-resolution photography (Kanha, Bandhavgarh, Satpura, Kaziranga, Serengeti, Yasuní, Mamirauá, Virunga)
+  - Wildlife species indicator photography (Bengal Tiger, Indian Leopard, Barasingha, Indian Rhino, Asian Elephant, Sloth Bear, Dhole, Mountain Gorilla, Amazon Jaguar)
+  - Satellite remote sensing composites (Sentinel-2 Natural Color TCI, False Color CIR, NDVI, NDWI, NDBI, Bi-temporal change divergence, SAR radar backscatter)
+  - Hotspot and disturbance textures (Canopy loss/logging, active wildfire scorch, wetland desiccation, agricultural border encroachment)
+  - Cartographic UI textures & SVG generators (Tactical GIS grid, radar reticle, dark GIS placeholder)
+  - Video telemetry feeds (Drone aerial canopy flyover, night thermal perimeter scan, riparian corridor sweep, satellite 12-month greening timelapse, Amazon deforestation timelapse, nocturnal camera trap waterhole, elephant herd migration, operational system briefing)
+
+**Work Done**
+- Created `frontend/src/assets.ts` containing:
+  - Strongly-typed TypeScript interfaces: `ImageAsset`, `VideoAsset`, `ImageCategory`, `VideoCategory`.
+  - SVG utility generators for instantaneous offline rendering: `createGisGridSvg()`, `createRadarReticleSvg()`, `getPlaceholderImage()`.
+  - Comprehensive `IMAGES` asset dictionary structured across `branding`, `reserves`, `wildlife`, `satellite`, `hotspots`, and `ui`.
+  - Comprehensive `VIDEOS` asset dictionary structured across `dronePatrol`, `satelliteTimelapse`, `cameraTrap`, and `operational`.
+  - Lookup utilities and convenience resolvers: `getAreaImage(areaIdOrSlug)`, `getSpeciesImage(query)`, `getSatelliteImage(product)`, `getHotspotImage(changeType)`, `getVideoById(id)`, `getVideosByCategory(category)`, `getImagesByCategory(category)`, `getAllImages()`, `getAllVideos()`.
+  - Exported `ASSETS` container as default and named export matching `@/assets`.
+
+**Files Changed**
+- `frontend/src/assets.ts`
+  - Created central assets catalog for images, satellite composites, wildlife photography, and video feeds.
+- `memory.md`
+  - Updated Current State and added interaction record.
+
+**Verification**
+- `npx tsc --noEmit`: Executed cleanly with exit code 0 (zero TypeScript errors).
+- Path alias verification: Verified `@/assets` imports resolve directly to `frontend/src/assets.ts`.
+
+**Git**
+- Branch: master
+- Commit: pending
+- Push: pending
+- Status: Ready to commit and push
+
+**Notes**
+- Components can now import assets directly via `import { ASSETS, IMAGES, VIDEOS, getAreaImage, getSpeciesImage } from '@/assets';`.
 
 
