@@ -601,4 +601,66 @@
 **Notes**
 - Components can now import assets directly via `import { ASSETS, IMAGES, VIDEOS, getAreaImage, getSpeciesImage } from '@/assets';`.
 
+### 2026-09-18 19:10
+
+**User Request**
+> open website
+
+**Exploration**
+- Audited running background processes and discovered Next.js server was offline while FastAPI backend daemon (`task-1983`) remained active on port 8000.
+- Verified build and verified port availability on 3000.
+
+**Work Done**
+- Launched Next.js server on `http://localhost:3000`.
+- Opened the web application in user's default browser via `Start-Process "http://localhost:3000"`.
+- Verified live rendering of the landing page via Chrome DevTools and captured verification screenshot.
+
+**Files Changed**
+- `memory.md`
+  - Updated interaction history.
+
+**Verification**
+- Verified Next.js server listening on `0.0.0.0:3000` via `netstat`.
+- Verified landing page renders cleanly with tactical GIS dark theme, hero banner, and operational status.
+
+**Git**
+- Branch: master
+- Commit: pending
+- Push: pending
+- Status: Ready to commit and push
+
+**Notes**
+- Both frontend (`http://localhost:3000`) and backend (`http://127.0.0.1:8000`) are active.
+
+### 2026-09-18 19:34
+
+**User Request**
+> Use `Homepage-bg1.png` as background of home page with relative position. Then open website.
+
+**Exploration**
+- Verified `frontend/src/components/layout/Homepage-bg1.png` and `frontend/public/Homepage-bg1.png` are identical (SHA256 match).
+- Inspected `frontend/src/app/page.tsx` — the background was already implemented as a `fixed inset-0 z-0` `<Image>` with `/Homepage-bg1.png` and atmospheric gradient overlays.
+- Confirmed `frontend/public/Homepage-bg1.png` is correctly served as a static asset by Next.js at path `/Homepage-bg1.png`.
+
+**Work Done**
+- No code changes required — the background image was already wired in `page.tsx` using Next.js `<Image fill>` with `fixed inset-0` positioning.
+- Started Next.js dev server (daemon task-59) on `http://localhost:3000`.
+- Navigated browser to `http://localhost:3000` and captured a screenshot confirming the Royal Bengal Tiger background image renders correctly with cinematic dark atmospheric overlays.
+
+**Files Changed**
+- `memory.md`: Updated interaction history.
+
+**Verification**
+- Screenshot confirmed: Homepage renders with the Bengal Tiger `Homepage-bg1.png` as a full-viewport background image.
+- Background shows tiger centered with multi-layer dark gradient overlays for text contrast.
+- Feature cards (SPECTRAL INDICES, FIRE HOTSPOTS, VECTORIZED ALERTS) and CTA buttons render correctly above the background.
+
+**Git**
+- Branch: master
+- Commit: pending
+- Push: pending
+
+**Notes**
+- Next.js dev server running on `http://localhost:3000`.
+- Background image uses `position: fixed` via Tailwind `fixed inset-0 z-0` — this means it stays pinned when scrolling.
 
