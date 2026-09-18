@@ -126,3 +126,67 @@ export interface TimelineDataPoint {
   fireIncidents: number;
   canopyLossHa: number;
 }
+
+export interface AreaStatistics {
+  area_id: string;
+  area_name: string;
+  forest_cover_percent: number;
+  canopy_loss_year_ha: number;
+  water_bodies_ha: number;
+  urban_builtup_ha: number;
+  habitat_change_score: number;
+  active_fires_count: number;
+  threat_index: number;
+  last_cloud_free_pass: string;
+  land_cover_distribution: Record<string, number>;
+  sensor_telemetry?: Record<string, any>;
+}
+
+export interface NdviDistributionBin {
+  ndvi: string;
+  baseline: number;
+  current: number;
+}
+
+export interface ChangeDistributionBin {
+  interval: string;
+  label: string;
+  areaHa: number;
+  color: string;
+  desc: string;
+}
+
+export interface ChangeAnalysisResult {
+  analysis_type: string;
+  area_id: string;
+  area_name: string;
+  start_date: string;
+  end_date: string;
+  area_affected_ha: number;
+  vegetation_loss_ha: number;
+  vegetation_gain_ha: number;
+  net_change_ha: number;
+  percentage_change: number;
+  confidence_score: number;
+  baseline_index_mean: number;
+  current_index_mean: number;
+  ndvi_distribution: NdviDistributionBin[];
+  change_distribution: ChangeDistributionBin[];
+  methodology_summary: Record<string, string>;
+  computed_at: string;
+}
+
+export interface SpectralIndexResult {
+  index_name: string;
+  area_id?: string;
+  mean: number;
+  median: number;
+  min: number;
+  max: number;
+  std: number;
+  surface_area_ha: number;
+  cloud_cover_percent: number;
+  sensor: string;
+  computed_at: string;
+}
+

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MOCK_ALERTS } from '@/lib/mock-data';
 import { SeverityBadge } from '@/components/common/SeverityBadge';
-import { formatDate } from '@/lib/utils';
+import { formatDate, cn } from '@/lib/utils';
+import { apiClient } from '@/lib/api-client';
 import {
   Bell,
   CheckCircle,
@@ -16,13 +17,28 @@ import {
   ShieldAlert,
   Clock,
   Filter,
+  Radio,
 } from 'lucide-react';
 import { AlertStatus } from '@/types';
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState(MOCK_ALERTS);
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
+
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.checkHealth().then((h) => {
+      if (isMounted) setIsBackendOnline(h.isOnline);
+    });
+    apiClient.getAlerts().then((data) => {
+      if (isMounted && data && data.length > 0) setAlerts(data);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleAcknowledge = (id: string) => {
     setAlerts(
@@ -56,11 +72,26 @@ export default function AlertsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 font-mono text-xs text-slate-400">
-          <span>ACTIVE UNREAD:</span>
-          <span className="text-red-400 font-bold">
-            {alerts.filter((a) => a.status === 'UNREAD').length} ALARMS
-          </span>
+        <div className="flex items-center gap-3 font-mono text-xs text-slate-400 flex-wrap">
+          {isBackendOnline !== null && (
+            <span
+              className={cn(
+                'px-2.5 py-1 rounded font-mono text-[11px] flex items-center gap-1.5 border',
+                isBackendOnline
+                  ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                  : 'bg-amber-950/80 border-amber-500/40 text-amber-300'
+              )}
+            >
+              <span className={cn('w-1.5 h-1.5 rounded-full', isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400')} />
+              {isBackendOnline ? 'FASTAPI: CONNECTED' : 'OFFLINE FALLBACK'}
+            </span>
+          )}
+          <div className="flex items-center gap-1.5">
+            <span>ACTIVE UNREAD:</span>
+            <span className="text-red-400 font-bold">
+              {alerts.filter((a) => a.status === 'UNREAD').length} ALARMS
+            </span>
+          </div>
         </div>
       </div>
 

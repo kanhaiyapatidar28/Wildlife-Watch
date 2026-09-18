@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { KPICards } from '@/components/dashboard/KPICards';
@@ -10,7 +10,8 @@ import { LandCoverChart } from '@/components/dashboard/LandCoverChart';
 import { ChangeDetectionPreview } from '@/components/dashboard/ChangeDetectionPreview';
 import { PhenologyChart } from '@/components/analytics/PhenologyChart';
 import { MOCK_AREAS, MOCK_TIMELINE } from '@/lib/mock-data';
-import { ProtectedArea } from '@/types';
+import { ProtectedArea, TimelineDataPoint } from '@/types';
+import { apiClient } from '@/lib/api-client';
 import {
   Search,
   Calendar,
@@ -24,10 +25,17 @@ import {
   Activity,
   SlidersHorizontal,
   ChevronDown,
+  CheckCircle2,
+  Radio,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
+  // State for reserves list and dynamic timeline
+  const [areas, setAreas] = useState<ProtectedArea[]>(MOCK_AREAS);
+  const [timelineData, setTimelineData] = useState<TimelineDataPoint[]>(MOCK_TIMELINE);
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null);
+
   // State for selected protected reserve
   const [selectedAreaId, setSelectedAreaId] = useState<string>('area-5'); // Default to Virunga National Park
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,23 +48,63 @@ export default function DashboardPage() {
   // State for vegetation trend chart mode
   const [chartMode, setChartMode] = useState<'ndvi' | 'water' | 'loss'>('ndvi');
 
+  // Load areas and backend health on mount
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.getAreas().then((fetched) => {
+      if (isMounted && fetched && fetched.length > 0) {
+        setAreas(fetched);
+      }
+    });
+    apiClient.checkHealth().then((h) => {
+      if (isMounted) setIsBackendOnline(h.isOnline);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Update timeline when selected reserve changes
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.getAreaTimeline(selectedAreaId).then((tl) => {
+      if (isMounted && tl && tl.length > 0) {
+        setTimelineData(tl);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedAreaId]);
+
   // Find active selected area
   const selectedArea: ProtectedArea =
-    MOCK_AREAS.find((a) => a.id === selectedAreaId) || MOCK_AREAS[0];
+    areas.find((a) => a.id === selectedAreaId) || areas[0] || MOCK_AREAS[0];
 
   // Filtered areas for search
-  const filteredAreas = MOCK_AREAS.filter(
+  const filteredAreas = areas.filter(
     (a) =>
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.biome.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    try {
+      const [fetchedAreas, fetchedTl, health] = await Promise.all([
+        apiClient.getAreas(),
+        apiClient.getAreaTimeline(selectedAreaId),
+        apiClient.checkHealth(),
+      ]);
+      if (fetchedAreas && fetchedAreas.length > 0) setAreas(fetchedAreas);
+      if (fetchedTl && fetchedTl.length > 0) setTimelineData(fetchedTl);
+      setIsBackendOnline(health.isOnline);
+    } catch {
+      // fallback preserved
+    } finally {
       setIsRefreshing(false);
-    }, 800);
+    }
   };
 
   return (
@@ -75,6 +123,19 @@ export default function DashboardPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 COPERNICUS NRT ACTIVE
               </span>
+              {isBackendOnline !== null && (
+                <span
+                  className={cn(
+                    'px-2 py-0.5 rounded font-mono text-[10px] flex items-center gap-1 border',
+                    isBackendOnline
+                      ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                      : 'bg-amber-950/80 border-amber-500/40 text-amber-300'
+                  )}
+                >
+                  <span className={cn('w-1.5 h-1.5 rounded-full', isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400')} />
+                  {isBackendOnline ? 'FASTAPI: CONNECTED' : 'OFFLINE FALLBACK'}
+                </span>
+              )}
               <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 font-mono text-[10px]">
                 REVISIT: 5 DAYS
               </span>
@@ -370,7 +431,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Phenology Chart */}
-              <PhenologyChart data={MOCK_TIMELINE} mode={chartMode} />
+              <PhenologyChart data={timelineData} mode={chartMode} />
 
               <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
                 <div className="flex items-center gap-3">

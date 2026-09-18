@@ -1,20 +1,57 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MOCK_TIMELINE, MOCK_AREAS } from '@/lib/mock-data';
 import { PhenologyChart } from '@/components/analytics/PhenologyChart';
+import { apiClient } from '@/lib/api-client';
+import { ProtectedArea, TimelineDataPoint } from '@/types';
+import { cn } from '@/lib/utils';
 import {
   TrendingUp,
   TreePine,
   Droplet,
   Flame,
   Info,
+  Radio,
 } from 'lucide-react';
 
 export default function TimelinePage() {
-  const [selectedArea, setSelectedArea] = useState(MOCK_AREAS[0]);
+  const [areas, setAreas] = useState<ProtectedArea[]>(MOCK_AREAS);
+  const [selectedArea, setSelectedArea] = useState<ProtectedArea>(MOCK_AREAS[0]);
+  const [timelineData, setTimelineData] = useState<TimelineDataPoint[]>(MOCK_TIMELINE);
   const [metricMode, setMetricMode] = useState<'ndvi' | 'water' | 'loss'>('ndvi');
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.checkHealth().then((h) => {
+      if (isMounted) setIsBackendOnline(h.isOnline);
+    });
+    apiClient.getAreas().then((data) => {
+      if (isMounted && data && data.length > 0) {
+        setAreas(data);
+        setSelectedArea(data[0]);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (selectedArea?.id) {
+      apiClient.getAreaTimeline(selectedArea.id).then((tl) => {
+        if (isMounted && tl && tl.length > 0) {
+          setTimelineData(tl);
+        }
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedArea?.id]);
 
   return (
     <AppLayout>
@@ -30,23 +67,38 @@ export default function TimelinePage() {
           </p>
         </div>
 
-        {/* Reserve Selector */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-mono text-slate-400">TARGET RESERVE:</label>
-          <select
-            value={selectedArea.id}
-            onChange={(e) => {
-              const a = MOCK_AREAS.find((x) => x.id === e.target.value);
-              if (a) setSelectedArea(a);
-            }}
-            className="h-9 px-3 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-200 font-medium focus:outline-none"
-          >
-            {MOCK_AREAS.map((area) => (
-              <option key={area.id} value={area.id}>
-                {area.name} ({area.country})
-              </option>
-            ))}
-          </select>
+        {/* Reserve Selector & Backend Health */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {isBackendOnline !== null && (
+            <span
+              className={cn(
+                'px-2.5 py-1 rounded font-mono text-[11px] flex items-center gap-1.5 border',
+                isBackendOnline
+                  ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                  : 'bg-amber-950/80 border-amber-500/40 text-amber-300'
+              )}
+            >
+              <span className={cn('w-1.5 h-1.5 rounded-full', isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400')} />
+              {isBackendOnline ? 'FASTAPI: CONNECTED' : 'OFFLINE FALLBACK'}
+            </span>
+          )}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-mono text-slate-400">TARGET RESERVE:</label>
+            <select
+              value={selectedArea.id}
+              onChange={(e) => {
+                const a = areas.find((x) => x.id === e.target.value) || MOCK_AREAS.find((x) => x.id === e.target.value);
+                if (a) setSelectedArea(a);
+              }}
+              className="h-9 px-3 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-200 font-medium focus:outline-none"
+            >
+              {areas.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name} ({area.country})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -109,7 +161,7 @@ export default function TimelinePage() {
         </div>
 
         {/* Dynamic Chart */}
-        <PhenologyChart data={MOCK_TIMELINE} mode={metricMode} />
+        <PhenologyChart data={timelineData} mode={metricMode} />
 
         {/* Interpretation Callout */}
         <div className="p-3.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs font-mono text-slate-300 flex items-start gap-2.5">

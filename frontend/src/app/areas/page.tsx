@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MOCK_AREAS } from '@/lib/mock-data';
-import { formatHectares, formatDate } from '@/lib/utils';
+import { ProtectedArea } from '@/types';
+import { apiClient } from '@/lib/api-client';
+import { formatHectares, formatDate, cn } from '@/lib/utils';
 import {
   Compass,
   Search,
@@ -15,13 +17,29 @@ import {
   ArrowRight,
   Globe2,
   TrendingDown,
+  Radio,
 } from 'lucide-react';
 
 export default function AreasPage() {
+  const [areas, setAreas] = useState<ProtectedArea[]>(MOCK_AREAS);
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [iucnFilter, setIucnFilter] = useState('ALL');
 
-  const filteredAreas = MOCK_AREAS.filter((area) => {
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.getAreas().then((data) => {
+      if (isMounted && data && data.length > 0) setAreas(data);
+    });
+    apiClient.checkHealth().then((h) => {
+      if (isMounted) setIsBackendOnline(h.isOnline);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredAreas = areas.filter((area) => {
     if (iucnFilter !== 'ALL' && area.iucn_category !== iucnFilter) return false;
     if (
       searchQuery &&
@@ -48,7 +66,20 @@ export default function AreasPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {isBackendOnline !== null && (
+            <span
+              className={cn(
+                'px-2.5 py-1 rounded font-mono text-[11px] flex items-center gap-1.5 border',
+                isBackendOnline
+                  ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                  : 'bg-amber-950/80 border-amber-500/40 text-amber-300'
+              )}
+            >
+              <span className={cn('w-1.5 h-1.5 rounded-full', isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400')} />
+              {isBackendOnline ? 'FASTAPI: CONNECTED' : 'OFFLINE FALLBACK'}
+            </span>
+          )}
           <button className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-lg shadow-emerald-950/40">
             <Plus className="w-3.5 h-3.5" />
             <span>Enroll Custom AOI</span>

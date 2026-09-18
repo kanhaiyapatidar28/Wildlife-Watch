@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MOCK_AREAS } from '@/lib/mock-data';
+import { ProtectedArea } from '@/types';
 import { AnalysisType, ChangeAnalysisStats } from '@/types/change-analysis';
 import { ChangeControls } from '@/components/change-analysis/ChangeControls';
 import { ComparisonMaps } from '@/components/change-analysis/ComparisonMaps';
@@ -10,6 +11,7 @@ import { DivergingChangeMap } from '@/components/change-analysis/DivergingChange
 import { ChangeStatsGrid } from '@/components/change-analysis/ChangeStatsGrid';
 import { DistributionCharts } from '@/components/change-analysis/DistributionCharts';
 import { MethodologyPanel } from '@/components/change-analysis/MethodologyPanel';
+import { apiClient } from '@/lib/api-client';
 import {
   Layers,
   Sparkles,
@@ -20,6 +22,7 @@ import {
 
 export default function ChangeAnalysisPage() {
   // 1. Controls state
+  const [areas, setAreas] = useState<ProtectedArea[]>(MOCK_AREAS);
   const [selectedAreaId, setSelectedAreaId] = useState<string>(MOCK_AREAS[0]?.id || 'area-1');
   const [startDate, setStartDate] = useState<string>('2024-03-01');
   const [endDate, setEndDate] = useState<string>('2026-03-01');
@@ -27,9 +30,21 @@ export default function ChangeAnalysisPage() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [analysisTimestamp, setAnalysisTimestamp] = useState<string>('Just now');
 
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.getAreas().then((fetched) => {
+      if (isMounted && fetched && fetched.length > 0) {
+        setAreas(fetched);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Selected Area object
   const selectedArea =
-    MOCK_AREAS.find((a) => a.id === selectedAreaId) || MOCK_AREAS[0];
+    areas.find((a) => a.id === selectedAreaId) || areas[0] || MOCK_AREAS[0];
 
   // Dynamic statistics calculated based on Area and Analysis Type
   const computeStats = (type: AnalysisType): ChangeAnalysisStats => {
@@ -100,14 +115,35 @@ export default function ChangeAnalysisPage() {
 
   const [stats, setStats] = useState<ChangeAnalysisStats>(() => computeStats('vegetation_ndvi'));
 
-  // Trigger analysis simulation
-  const handleRunAnalysis = () => {
+  // Trigger analysis simulation via live FastAPI backend
+  const handleRunAnalysis = async () => {
     setIsAnalyzing(true);
-    setTimeout(() => {
+    try {
+      const result = await apiClient.runChangeDetection({
+        area_id: selectedAreaId,
+        start_date: startDate,
+        end_date: endDate,
+        analysis_type: analysisType,
+      });
+
+      setStats({
+        areaAffectedHa: Math.round(result.area_affected_ha),
+        lossAreaHa: Math.round(result.vegetation_loss_ha),
+        gainAreaHa: Math.round(result.vegetation_gain_ha),
+        netChangeHa: Math.round(result.net_change_ha),
+        percentageChange: result.percentage_change,
+        confidenceScore: Math.round(result.confidence_score * 100),
+        baselineIndexMean: result.baseline_index_mean,
+        currentIndexMean: result.current_index_mean,
+        cloudCoverPercent: 1.4,
+      });
+      setAnalysisTimestamp(new Date(result.computed_at).toLocaleTimeString());
+    } catch {
       setStats(computeStats(analysisType));
-      setIsAnalyzing(false);
       setAnalysisTimestamp(new Date().toLocaleTimeString());
-    }, 750);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   // Reset to default 2-year window

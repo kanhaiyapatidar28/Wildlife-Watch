@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MOCK_REPORTS, MOCK_AREAS } from '@/lib/mock-data';
-import { formatDate } from '@/lib/utils';
+import { formatDate, cn } from '@/lib/utils';
+import { apiClient } from '@/lib/api-client';
+import { ProtectedArea, ReportItem } from '@/types';
 import {
   FileText,
   Download,
@@ -15,23 +17,45 @@ import {
   Shield,
   Clock,
   Sparkles,
+  Radio,
 } from 'lucide-react';
 
 export default function ReportsPage() {
-  const [reportsList, setReportsList] = useState(MOCK_REPORTS);
+  const [reportsList, setReportsList] = useState<ReportItem[]>(MOCK_REPORTS);
+  const [areas, setAreas] = useState<ProtectedArea[]>(MOCK_AREAS);
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedArea, setSelectedArea] = useState(MOCK_AREAS[0].id);
   const [reportFormat, setReportFormat] = useState('GEOPDF');
   const [reportTitle, setReportTitle] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.checkHealth().then((h) => {
+      if (isMounted) setIsBackendOnline(h.isOnline);
+    });
+    apiClient.getReports().then((data) => {
+      if (isMounted && data && data.length > 0) setReportsList(data);
+    });
+    apiClient.getAreas().then((data) => {
+      if (isMounted && data && data.length > 0) {
+        setAreas(data);
+        setSelectedArea(data[0].id);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleGenerateReport = (e: React.FormEvent) => {
     e.preventDefault();
     setIsGenerating(true);
 
     setTimeout(() => {
-      const areaObj = MOCK_AREAS.find((a) => a.id === selectedArea);
-      const newRep = {
+      const areaObj = areas.find((a) => a.id === selectedArea) || MOCK_AREAS.find((a) => a.id === selectedArea);
+      const newRep: ReportItem = {
         id: `rep-${Date.now()}`,
         title: reportTitle || `Habitat Audit - ${areaObj?.name}`,
         format: reportFormat as any,
@@ -63,7 +87,20 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {isBackendOnline !== null && (
+            <span
+              className={cn(
+                'px-2.5 py-1 rounded font-mono text-[11px] flex items-center gap-1.5 border',
+                isBackendOnline
+                  ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                  : 'bg-amber-950/80 border-amber-500/40 text-amber-300'
+              )}
+            >
+              <span className={cn('w-1.5 h-1.5 rounded-full', isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400')} />
+              {isBackendOnline ? 'FASTAPI: CONNECTED' : 'OFFLINE FALLBACK'}
+            </span>
+          )}
           <button
             onClick={() => setShowModal(true)}
             className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-lg shadow-emerald-950/40"
@@ -192,7 +229,7 @@ export default function ReportsPage() {
                   onChange={(e) => setSelectedArea(e.target.value)}
                   className="w-full h-9 px-3 rounded bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
                 >
-                  {MOCK_AREAS.map((a) => (
+                  {areas.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} ({a.country})
                     </option>

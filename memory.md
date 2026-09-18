@@ -46,18 +46,17 @@
   - Alembic migration version `0001_initial_postgis_schema.py`.
   - Seed dataset covering premier Indian tiger reserves (Kanha, Bandhavgarh, Satpura, Kaziranga) and global reserves.
   - Google Earth Engine (GEE) integration (`app/satellite/earth_engine.py`) with all 7 functions (`get_sentinel_images`, `mask_clouds`, `calculate_ndvi`, `calculate_ndwi`, `calculate_ndbi`, `calculate_composite`, `calculate_change`), server-side reductions, MapID generation, and TTL caching.
-  - Comprehensive 68-test automated test suite with 100% pass rate.
+  - **Frontend-Backend API Integration**: Resilient API client (`frontend/src/lib/api-client.ts`) directly consuming FastAPI REST endpoints (`http://127.0.0.1:8000/api`) with automatic fallback to local geospatial mock datasets on offline/unreachable states, verified with live telemetry and `FASTAPI: CONNECTED` status badges across all core pages.
 
 ## Known Issues
 - Live Google Earth Engine execution requires configuring `EE_PROJECT_ID` or `EE_SERVICE_ACCOUNT_EMAIL` with valid GCP credentials in `.env`; without credentials, the system operates with its validated offline geospatial simulation engine.
 - Local Git repository has no configured remote push destination (`origin`).
 
 ## Pending Work
-1. **Frontend-Backend API Binding**: Connect Next.js frontend pages and components to dynamically consume live FastAPI endpoints (`/api/areas`, `/api/hotspots`, `/api/alerts`, `/api/reports`, `/api/analysis/...`) instead of static `@/lib/mock-data.ts`.
-2. **Earth Engine Tile Visualization**: Wire frontend Mapbox GL maps in `/explore` and `/change-analysis` to render live Google Earth Engine tile URLs (`https://earthengine.googleapis.com/.../tiles/{z}/{x}/{y}`).
-3. **Interactive Report Export**: Connect the frontend "Generate Report" modal to `POST /api/reports` to trigger downloadable audit files.
-4. **Production GCP Earth Engine Credentials**: Add GCP service account key for live planetary queries.
-5. **Git Remote Setup**: Add GitHub remote repository (`git remote add origin <url>`) to enable push synchronization.
+1. **Earth Engine Tile Visualization**: Wire frontend Mapbox GL maps in `/explore` and `/change-analysis` to render live Google Earth Engine tile URLs (`https://earthengine.googleapis.com/.../tiles/{z}/{x}/{y}`).
+2. **Interactive Report Export**: Connect the frontend "Generate Report" modal to `POST /api/reports` to trigger downloadable audit files.
+3. **Production GCP Earth Engine Credentials**: Add GCP service account key for live planetary queries.
+4. **Git Remote Setup**: Add GitHub remote repository (`git remote add origin <url>`) to enable push synchronization.
 
 ## Interaction History
 
@@ -478,5 +477,80 @@
 
 **Notes**
 - Recommended immediate next task: Bind frontend data fetching hooks to the FastAPI backend endpoints.
+
+### 2026-09-18 18:30
+
+**User Request**
+> Integrate Next.js frontend with FastAPI REST backend endpoints, replacing static mock data usage with live telemetry while preserving 100% offline resilience and visual status indicators.
+
+**Exploration**
+- Inspected frontend pages (`/dashboard`, `/change-analysis`, `/hotspots`, `/areas`, `/areas/[id]`, `/alerts`, `/reports`, `/timeline`).
+- Identified backend REST endpoint conventions (`GET /api/areas`, `GET /api/areas/{id}`, `GET /api/areas/{id}/statistics`, `GET /api/areas/{id}/timeline`, `GET /api/areas/{id}/hotspots`, `GET /api/hotspots`, `GET /api/alerts`, `GET /api/reports`, `POST /api/analysis/change-detection`).
+- Discovered Windows Node.js 22 IPv6 binding quirk where `localhost` resolves to `::1` while Uvicorn was bound to `127.0.0.1`, causing ECONNREFUSED; resolved by setting explicit `127.0.0.1` in API base URL.
+- Identified standard response structure `{ success: true, data: ..., meta: ... }` requiring transparent payload unwrapping.
+
+**Work Done**
+- Configured `frontend/.env.example` and `frontend/.env.local` with `NEXT_PUBLIC_API_URL="http://127.0.0.1:8000/api"`.
+- Extended `frontend/src/types/index.ts` with backend-compatible interfaces: `AreaStatistics`, `NdviDistributionBin`, `ChangeDistributionBin`, `ChangeAnalysisResult`, `SpectralIndexResult`.
+- Created robust `ApiClient` in `frontend/src/lib/api-client.ts` with 3000ms abort controller timeout, automatic `StandardResponse` unwrapping, and silent fallback to local mock data on network errors.
+- Wired `/dashboard`: Connected KPI statistics, reserve lists, and live seasonal timeline trends with HUD badge indicator (`FASTAPI: CONNECTED`).
+- Wired `/change-analysis`: Connected reserve selection and bi-temporal change detection invocation (`apiClient.runChangeDetection()`) with dynamic metrics and timestamp updates.
+- Wired `/hotspots`: Connected reserve dropdown and incident fetching (`apiClient.getHotspots()`, `apiClient.getAreas()`).
+- Wired `/areas`: Connected reserve directory cards to live API.
+- Wired `/areas/[id]`: Connected reserve profile, timeline, hotspots, alerts, and reports.
+- Wired `/alerts`: Connected incident notifications and status filtering to `apiClient.getAlerts()`.
+- Wired `/reports`: Connected conservation reports catalog to `apiClient.getReports()`.
+- Wired `/timeline`: Connected longitudinal vegetation and seasonal trend charts to `apiClient.getAreaTimeline()`.
+- Rebuilt frontend with `npm run build` and verified all 17 routes compiled cleanly with zero errors.
+- Captured screenshots in browser via DevTools verifying all pages display `FASTAPI: CONNECTED`.
+
+**Files Changed**
+- `frontend/.env.example`
+  - Created environment variable template for Next.js API URL.
+- `frontend/src/lib/api-client.ts`
+  - Created unified resilient API client connecting frontend to FastAPI backend with timeout and mock fallback.
+- `frontend/src/types/index.ts`
+  - Added types matching backend Pydantic models for statistics, distribution bins, and change analysis.
+- `frontend/src/app/dashboard/page.tsx`
+  - Integrated `ApiClient` for areas, timeline trends, and health badge.
+- `frontend/src/app/change-analysis/page.tsx`
+  - Integrated `ApiClient` for area selection and bi-temporal change detection execution.
+- `frontend/src/app/hotspots/page.tsx`
+  - Integrated `ApiClient` for live hotspot incidents and reserve filtering.
+- `frontend/src/components/hotspots/HotspotFilters.tsx`
+  - Updated reserve filter dropdown options from live API.
+- `frontend/src/app/areas/page.tsx`
+  - Integrated `ApiClient` for protected area directory and search.
+- `frontend/src/app/areas/[id]/page.tsx`
+  - Integrated `ApiClient` for reserve dossier, timeline, hotspots, alerts, and reports.
+- `frontend/src/app/alerts/page.tsx`
+  - Integrated `ApiClient` for operational incident notifications and status toggling.
+- `frontend/src/app/reports/page.tsx`
+  - Integrated `ApiClient` for habitat audit reports catalog and reserve filtering.
+- `frontend/src/app/timeline/page.tsx`
+  - Integrated `ApiClient` for longitudinal NDVI timeline and reserve selection.
+- `memory.md`
+  - Updated Current State, Pending Work, and Interaction History.
+
+**Verification**
+- `npm run build`: 0 errors across all 17 routes.
+- Browser Verification via DevTools:
+  - `/dashboard`: Verified `FASTAPI: CONNECTED` badge, telemetry cards, and live charts.
+  - `/hotspots`: Verified `FASTAPI: CONNECTED` badge, table of 8 incidents, and interactive drawer.
+  - `/areas`: Verified `FASTAPI: CONNECTED` badge and 8 reserve cards.
+  - `/change-analysis`: Verified `FASTAPI: CONNECTED` badge, execution timestamp, and tri-panel maps.
+  - `/alerts`: Verified `FASTAPI: CONNECTED` badge and alert list.
+  - `/reports`: Verified `FASTAPI: CONNECTED` badge and audit report list.
+  - `/timeline`: Verified `FASTAPI: CONNECTED` badge and longitudinal charts.
+  - `/areas/area-kanha`: Verified `FASTAPI: CONNECTED` badge and reserve details.
+
+**Git**
+- Branch: master
+- Commit: pending
+- Push: pending
+- Status: Ready to commit and push
+
+**Notes**
+- Next steps: Mapbox GL live Earth Engine tile URL rendering and report file export download.
 
 

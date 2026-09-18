@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { MOCK_HOTSPOTS } from '@/lib/mock-data';
-import { ChangeEventHotspot } from '@/types';
+import { MOCK_HOTSPOTS, MOCK_AREAS } from '@/lib/mock-data';
+import { ChangeEventHotspot, ProtectedArea } from '@/types';
+import { apiClient } from '@/lib/api-client';
 import {
   HotspotFilters,
   HotspotFilterState,
@@ -19,7 +20,9 @@ import {
   Activity,
   CheckCircle2,
   Download,
+  Radio,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const INITIAL_FILTERS: HotspotFilterState = {
   search: '',
@@ -32,14 +35,58 @@ const INITIAL_FILTERS: HotspotFilterState = {
 
 export default function HotspotsPage() {
   const [filters, setFilters] = useState<HotspotFilterState>(INITIAL_FILTERS);
+  const [allHotspots, setAllHotspots] = useState<ChangeEventHotspot[]>(MOCK_HOTSPOTS);
+  const [areas, setAreas] = useState<ProtectedArea[]>(MOCK_AREAS);
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null);
   const [selectedHotspot, setSelectedHotspot] = useState<ChangeEventHotspot | null>(
     MOCK_HOTSPOTS[0] || null
   );
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // Initial load: fetch areas and backend health
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.getAreas().then((data) => {
+      if (isMounted && data && data.length > 0) setAreas(data);
+    });
+    apiClient.checkHealth().then((h) => {
+      if (isMounted) setIsBackendOnline(h.isOnline);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Fetch hotspots when backend query filters change
+  useEffect(() => {
+    let isMounted = true;
+    apiClient
+      .getHotspots({
+        change_type: filters.changeType,
+        severity: filters.severity,
+        min_confidence: filters.minConfidence > 0 ? filters.minConfidence / 100 : undefined,
+        area_id: filters.areaId,
+      })
+      .then((data) => {
+        if (isMounted && data) {
+          setAllHotspots(data);
+          if (data.length > 0) {
+            // Keep selected hotspot or set to first in result
+            setSelectedHotspot((prev) => {
+              if (prev && data.some((h) => h.id === prev.id)) return prev;
+              return data[0];
+            });
+          }
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [filters.changeType, filters.severity, filters.minConfidence, filters.areaId]);
+
   // Filter computation
   const filteredHotspots = useMemo(() => {
-    return MOCK_HOTSPOTS.filter((hs) => {
+    return allHotspots.filter((hs) => {
       // 1. Text search
       if (filters.search) {
         const query = filters.search.toLowerCase();
@@ -155,6 +202,19 @@ export default function HotspotsPage() {
 
           {/* Quick Stats Pill Row */}
           <div className="flex items-center gap-2.5 flex-wrap">
+            {isBackendOnline !== null && (
+              <span
+                className={cn(
+                  'px-2.5 py-1 rounded font-mono text-[11px] flex items-center gap-1.5 border',
+                  isBackendOnline
+                    ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                    : 'bg-amber-950/80 border-amber-500/40 text-amber-300'
+                )}
+              >
+                <span className={cn('w-1.5 h-1.5 rounded-full', isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400')} />
+                {isBackendOnline ? 'FASTAPI: CONNECTED' : 'OFFLINE FALLBACK'}
+              </span>
+            )}
             <div className="px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-500/30 text-xs font-mono text-red-300 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               <span>Critical: <strong className="text-white font-bold">{criticalCount}</strong></span>
@@ -178,7 +238,8 @@ export default function HotspotsPage() {
           onFilterChange={setFilters}
           onReset={() => setFilters(INITIAL_FILTERS)}
           activeCount={filteredHotspots.length}
-          totalCount={MOCK_HOTSPOTS.length}
+          totalCount={allHotspots.length}
+          areas={areas}
         />
 
         {/* ========================================================================= */}

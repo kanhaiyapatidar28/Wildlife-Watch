@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -12,6 +12,14 @@ import {
   MOCK_REPORTS,
   MOCK_TIMELINE,
 } from '@/lib/mock-data';
+import {
+  ProtectedArea,
+  ChangeEventHotspot,
+  AlertNotification,
+  ReportItem,
+  TimelineDataPoint,
+} from '@/types';
+import { apiClient } from '@/lib/api-client';
 import { formatHectares, formatDate, cn } from '@/lib/utils';
 import { SeverityBadge } from '@/components/common/SeverityBadge';
 import { LandCoverChart } from '@/components/dashboard/LandCoverChart';
@@ -47,20 +55,53 @@ import {
   ChevronRight,
   Eye,
   X,
+  Radio,
 } from 'lucide-react';
 
 export default function AreaDetailPage() {
   const params = useParams();
   const areaId = (params?.id as string) || 'area-kanha';
 
-  // Find area or fallback to first area
-  const area = useMemo(() => {
+  // State for dynamic area dossier
+  const [currentArea, setCurrentArea] = useState<ProtectedArea>(() => {
     return (
       MOCK_AREAS.find((a) => a.id === areaId) ||
       MOCK_AREAS.find((a) => a.id === 'area-kanha') ||
       MOCK_AREAS[0]
     );
+  });
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null);
+  const [timelineData, setTimelineData] = useState<TimelineDataPoint[]>(MOCK_TIMELINE);
+  const [liveHotspots, setLiveHotspots] = useState<ChangeEventHotspot[]>([]);
+  const [liveAlerts, setLiveAlerts] = useState<AlertNotification[]>([]);
+  const [liveReports, setLiveReports] = useState<ReportItem[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.checkHealth().then((h) => {
+      if (isMounted) setIsBackendOnline(h.isOnline);
+    });
+    apiClient.getAreaById(areaId).then((res) => {
+      if (isMounted && res) setCurrentArea(res);
+    });
+    apiClient.getAreaTimeline(areaId).then((tl) => {
+      if (isMounted && tl && tl.length > 0) setTimelineData(tl);
+    });
+    apiClient.getAreaHotspots(areaId).then((hs) => {
+      if (isMounted && hs && hs.length > 0) setLiveHotspots(hs);
+    });
+    apiClient.getAlerts({ area_id: areaId }).then((al) => {
+      if (isMounted && al && al.length > 0) setLiveAlerts(al);
+    });
+    apiClient.getReports({ area_id: areaId }).then((rep) => {
+      if (isMounted && rep && rep.length > 0) setLiveReports(rep);
+    });
+    return () => {
+      isMounted = false;
+    };
   }, [areaId]);
+
+  const area = currentArea;
 
   // Active Tab State: Overview, Analysis, Hotspots, Wildlife, Human Activity, Reports
   const [activeTab, setActiveTab] = useState<
@@ -87,6 +128,7 @@ export default function AreaDetailPage() {
 
   // Derived mock data filtered for this specific reserve
   const areaHotspots = useMemo(() => {
+    if (liveHotspots.length > 0) return liveHotspots;
     const list = MOCK_HOTSPOTS.filter((h) => h.area_id === area.id);
     if (list.length === 0) {
       return [
@@ -123,7 +165,7 @@ export default function AreaDetailPage() {
       ];
     }
     return list;
-  }, [area]);
+  }, [area, liveHotspots]);
 
   const filteredHotspots = useMemo(() => {
     if (hotspotFilterSeverity === 'ALL') return areaHotspots;
@@ -153,10 +195,12 @@ export default function AreaDetailPage() {
   }, [area]);
 
   const areaAlerts = useMemo(() => {
+    if (liveAlerts.length > 0) return liveAlerts;
     return MOCK_ALERTS.filter((a) => a.area_id === area.id);
-  }, [area]);
+  }, [area, liveAlerts]);
 
   const areaReports = useMemo(() => {
+    if (liveReports.length > 0) return liveReports;
     const list = MOCK_REPORTS.filter((r) =>
       r.area_name.toLowerCase().includes(area.name.toLowerCase())
     );
@@ -260,6 +304,19 @@ export default function AreaDetailPage() {
                 <span className="px-2.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-mono text-xs">
                   IUCN {area.iucn_category}
                 </span>
+                {isBackendOnline !== null && (
+                  <span
+                    className={cn(
+                      'px-2.5 py-0.5 rounded font-mono text-xs flex items-center gap-1.5 border',
+                      isBackendOnline
+                        ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                        : 'bg-amber-950/80 border-amber-500/40 text-amber-300'
+                    )}
+                  >
+                    <span className={cn('w-1.5 h-1.5 rounded-full', isBackendOnline ? 'bg-emerald-400' : 'bg-amber-400')} />
+                    {isBackendOnline ? 'FASTAPI: CONNECTED' : 'OFFLINE FALLBACK'}
+                  </span>
+                )}
               </div>
 
               {/* Required Header Metadata Fields: State, Country, Protected-area type, Area size */}

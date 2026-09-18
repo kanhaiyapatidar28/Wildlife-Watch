@@ -12,6 +12,8 @@ import {
   Percent,
 } from 'lucide-react';
 
+import { ProtectedArea } from '@/types';
+
 export interface HotspotFilterState {
   search: string;
   changeType: string;
@@ -27,6 +29,7 @@ interface HotspotFiltersProps {
   onReset: () => void;
   activeCount: number;
   totalCount: number;
+  areas?: ProtectedArea[];
 }
 
 export const HotspotFilters: React.FC<HotspotFiltersProps> = ({
@@ -35,6 +38,7 @@ export const HotspotFilters: React.FC<HotspotFiltersProps> = ({
   onReset,
   activeCount,
   totalCount,
+  areas = MOCK_AREAS,
 }) => {
   const handleChange = <K extends keyof HotspotFilterState>(
     key: K,
@@ -164,7 +168,7 @@ export const HotspotFilters: React.FC<HotspotFiltersProps> = ({
             className="w-full h-8 px-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
           >
             <option value="ALL">All Protected Areas</option>
-            {MOCK_AREAS.map((area) => (
+            {areas.map((area) => (
               <option key={area.id} value={area.id}>
                 {area.name}
               </option>
