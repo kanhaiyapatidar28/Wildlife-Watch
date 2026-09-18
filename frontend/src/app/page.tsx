@@ -17,20 +17,20 @@ export default function HomePage() {
   return (
     <div className="relative min-h-screen bg-gis-dark text-slate-100 flex flex-col overflow-hidden">
       {/* Background Image: Homepage-bg1.png with cinematic GIS atmosphere */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <Image
           src="/Homepage-bg1.png"
           alt="Wildlife Watch Bengal Tiger Habitat Background"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-center scale-[1.01]"
+          className="object-cover object-center scale-[1.01] brightness-75"
         />
-        {/* Atmospheric gradients that reveal the tiger while maintaining UI contrast */}
-        <div className="absolute inset-0 bg-gis-dark/35" />
-        <div className="absolute inset-0 bg-gradient-to-b from-gis-dark/90 via-gis-dark/20 to-gis-dark/90" />
-        <div className="absolute inset-0 bg-gradient-to-r from-gis-dark/70 via-transparent to-gis-dark/60" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_30%,_rgba(7,11,16,0.75)_100%)]" />
+        {/* Atmospheric gradients — lightened to let the tiger image breathe */}
+        <div className="absolute inset-0 bg-gis-dark/20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-gis-dark/75 via-transparent to-gis-dark/80" />
+        <div className="absolute inset-0 bg-gradient-to-r from-gis-dark/50 via-transparent to-gis-dark/40" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_40%,_rgba(7,11,16,0.55)_100%)]" />
       </div>
 
       {/* Navigation Header */}
